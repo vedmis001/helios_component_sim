@@ -67,11 +67,10 @@ class Resistor(Element):
     def __init__(self, name: str, nodes: list[int], R: float):
         super().__init__(name, nodes)
         self.R = R
-        # TODO: derive g = 1/R and store it
 
 
     def stamp(self, G, b, t, dt):
-        # TODO: implement the four stamp operations above
+        # implement the four stamp operations above
         # remember to skip any node that is -1 (ground)
         g_res = 1/self.R
         n_pos, n_neg = self.nodes[0], self.nodes[1]
@@ -145,7 +144,6 @@ class Capacitor(Element):
         # TODO: read v_prev from v_nodes using self._node_voltage()
         # TODO: compute i_prev = G_eq * v_prev + I_hist  (current from last step)
         # TODO: recompute I_hist for next step
-        # Hint: you need dt here — consider storing it, or passing it in
 
         #voltage across terminals
         v_prev = self._node_voltage(v_nodes, self.nodes[0]) - self._node_voltage(v_nodes, self.nodes[1])
@@ -171,7 +169,7 @@ class Inductor(Element):
     Same structure as Capacitor: G_eq conductance + I_hist current source,
     but the expressions for G_eq and I_hist are different.
 
-    Hint: start from v = L * di/dt and apply the trapezoidal rule.
+    start from v = L * di/dt and apply the trapezoidal rule.
     """
 
     def __init__(self, name: str, nodes: list[int], L: float):

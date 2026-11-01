@@ -112,8 +112,7 @@ class Circuit:
     def solve(self, G: np.ndarray, b: np.ndarray) -> np.ndarray:
         """
         Solve G x = b and return x.
-
-        Hint: numpy.linalg.solve raises LinAlgError on a singular matrix.
+        numpy.linalg.solve raises LinAlgError on a singular matrix.
         A singular G almost always means a floating node (no DC path to
         ground) or a missing/duplicated stamp. Decide how you want to
         report that.
@@ -129,7 +128,6 @@ class Circuit:
     def update_histories(self, x: np.ndarray) -> None:
         """
         After a solve, let every dynamic element update its history.
-
         If you change update_history() to also take dt (see elements.py),
         change the call here to match.
         """

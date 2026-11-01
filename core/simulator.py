@@ -34,11 +34,6 @@ class Simulator:
           4. store t_new and x_new in self.time / self.x
           5. circuit.update_histories(x_new)
 
-        Decision to make before you write this: update_history() needs dt.
-        Either store dt on each element once before the loop starts, or
-        change the update_history signature to take it. Pick one and make
-        elements.py, circuit.py and this loop agree.
-
         Initial conditions: row 0 of self.x is all zeros, meaning every node
         voltage and every branch current starts at zero.
         """
