@@ -1,0 +1,10 @@
+{
+  "dt": 1e-6,
+  "t_end": 5e-3,
+  "nodes": ["gnd", "n1", "n2"],
+  "elements": [
+    {"type": "vsource",  "name": "Vs", "nodes": ["n1", "gnd"], "value": 1.0},
+    {"type": "resistor", "name": "R1", "nodes": ["n1", "n2"],  "value": 10.0},
+    {"type": "inductor", "name": "L1", "nodes": ["n2", "gnd"], "value": 10e-3}
+  ]
+}
