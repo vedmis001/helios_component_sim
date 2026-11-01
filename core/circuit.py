@@ -102,15 +102,6 @@ class Circuit:
 
         G = np.zeros((self.n_unknowns, self.n_unknowns))
         b = np.zeros(self.n_unknowns)
-        for i in range(self.n_unknowns):
-            g_row = []
-            for j in range(self.n_unknowns):
-                g_row.append(0)
-            G.append(g_row)
-        
-        #make b
-        for i in range(self.n_unknowns):
-            b.append(0)
         
         for elmt in self.elements:
             #check syntax on this
