@@ -1,0 +1,34 @@
+(base) vedant_misra001@Vedants-MacBook-Air-2 helios_component_sim % python run.py --config configs/rc_test.json
+ran 50000 steps, dt = 1e-06 s, t_end = 0.05 s
+  final v(n1) = 1 V
+  final v(n2) = 0.993262 V
+saved results/rc_test.csv
+(base) vedant_misra001@Vedants-MacBook-Air-2 helios_component_sim % python tests/test_rc.py
+RMSE    = 1.581e-05 V
+max |e| = 5.000e-05 V
+saved rc_test.png
+PASS
+(base) vedant_misra001@Vedants-MacBook-Air-2 helios_component_sim % python tests/test_rl.py
+RMSE    = 1.581e-05 A  (1.58e-04 of final current)
+max |e| = 4.998e-05 A
+branch current vs series current: max|ib - i| = 1.987e-01, max|ib + i| = 1.388e-17
+saved rl_test.png
+PASS
+(base) vedant_misra001@Vedants-MacBook-Air-2 helios_component_sim % python run.py --config configs/rl_test.json
+ran 5000 steps, dt = 1e-06 s, t_end = 0.005 s
+  final v(n1) = 1 V
+  final v(n2) = 0.00674131 V
+saved results/rl_test.csv
+(base) vedant_misra001@Vedants-MacBook-Air-2 helios_component_sim % python tests/test_rlc.py
+alpha = 250.0 1/s, w0 = 1000.0 rad/s, wd = 968.2 rad/s
+simulator vs analytical: RMSE = 1.118e-04 V, max |e| = 3.558e-04 V
+analytical vs solve_ivp: max gap = 4.824e-11 V (should be tiny)
+peak Vc: simulator 1.4443 V, analytical 1.4443 V
+saved rlc_test.png
+PASS
+(base) vedant_misra001@Vedants-MacBook-Air-2 helios_component_sim % python run.py --config configs/rlc_test.json
+ran 20000 steps, dt = 1e-06 s, t_end = 0.02 s
+  final v(n1) = 1 V
+  final v(n2) = 0.998286 V
+  final v(n3) = 0.993278 V
+saved results/rlc_test.csv
