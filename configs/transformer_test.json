@@ -1,0 +1,44 @@
+{
+    "dt": 1e-06,
+    "t_end": 0.002,
+    "nodes": [
+      "gnd",
+      "n1",
+      "n2"
+    ],
+    "elements": [
+      {
+        "type": "vsource",
+        "name": "Vs",
+        "nodes": [
+          "n1",
+          "gnd"
+        ],
+        "value": 79674.3371
+      },
+      {
+        "type": "transformer",
+        "name": "T1",
+        "nodes": [
+          "n1",
+          "gnd",
+          "n2",
+          "gnd"
+        ],
+        "value": {
+          "ratio": 3.942857142857143,
+          "R": 0.12696,
+          "L": 0.05051577893736758
+        }
+      },
+      {
+        "type": "resistor",
+        "name": "Rload",
+        "nodes": [
+          "n2",
+          "gnd"
+        ],
+        "value": 8.166667
+      }
+    ]
+  }
