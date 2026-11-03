@@ -17,6 +17,15 @@ class SingularMatrixError(Exception):
         self.message = message
         super().__init__(self.message)
 
+GROUND_NAMES = {"gnd", "0"}
+
+ELEMENT_REGISTRY = {
+    "resistor": Resistor,
+    "capacitor": Capacitor,
+    "inductor": Inductor,
+    "vsource": VoltageSource,
+    "isource": CurrentSource,
+}
 
 class Circuit:
     """
@@ -28,29 +37,34 @@ class Circuit:
     """
     #node names that mean "reference node"
     # these map to index -1 and never as a row/column of the matrix.
-    ground_names = {"gnd", "0"}
+    ground_names = GROUND_NAMES
+    element_registry = ELEMENT_REGISTRY
 
-    #maps the "type" string in a config dict to the element class.
-    element_registry = {
-        "resistor": Resistor,
-        "capacitor": Capacitor,
-        "inductor": Inductor,
-        "vsource": VoltageSource,
-        "isource": CurrentSource,
-    }
+  
 
+  
     def __init__(self, node_map: dict, n_nodes: int, elements: list[Element]):
         self.node_map = node_map      # name -> matrix index (-1 for ground)
         self.n_nodes = n_nodes        # non-ground nodes only
         self.elements = elements
 
+        branch_idx = self.n_nodes
+
+        # Voltage sources
         # Voltage sources each add one unknown (their branch current).
         # Give each one its row/col index in the augmented matrix.
         self.vsources = [e for e in elements if isinstance(e, VoltageSource)]
-        for k, vs in enumerate(self.vsources):
-            vs.branch_idx = self.n_nodes + k
+        for vs in self.vsources:
+            vs.branch_idx = branch_idx
+            branch_idx += 1
 
-        self.n_unknowns = self.n_nodes + len(self.vsources)
+        # Transformers (and any other branch elements)
+        self.transformers = [e for e in elements if hasattr(e, "n_branches") and e.n_branches > 0]
+        for tr in self.transformers:
+            tr.branch_idx = branch_idx
+            branch_idx += 1
+
+        self.n_unknowns = branch_idx        
 
     # ------------------------------------------------------------------
     # Construction from a config dict (plumbing, not the numerical core)

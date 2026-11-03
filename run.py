@@ -26,8 +26,11 @@ import os
 
 import numpy as np
 
-from core.circuit import Circuit
+from core.circuit import Circuit, ELEMENT_REGISTRY
 from core.simulator import Simulator
+from components.transformer import Transformer
+
+ELEMENT_REGISTRY["transformer"] = Transformer
 
 
 def load_config(path: str) -> dict:
