@@ -84,10 +84,55 @@ class Transformer(Element):
         # TODO: stamp the four node-voltage entries of the constraint row
         # TODO: stamp the branch-column coefficient of the constraint row
         # TODO: set b[self.branch_idx] from the history terms
-        raise NotImplementedError
+        p_plus, p_minus = self.nodes[0], self.nodes[1]
+        s_plus, s_minus = self.nodes[2], self.nodes[3]
+
+        # col is self.branch_idx
+        if p_plus != -1:
+            G[p_plus, self.branch_idx] += 1
+
+        if p_minus != -1:
+            G[p_minus, self.branch_idx] -= 1
+
+        if s_plus != -1:
+            G[s_plus, self.branch_idx] -= self.a
+
+        if s_minus != -1:
+            G[s_minus, self.branch_idx] += self.a
+
+        #node-voltage entries in constraint row
+        if p_plus != -1:
+            G[self.branch_idx, p_plus] += 1
+        if p_minus != -1:
+            G[self.branch_idx, p_minus] -= 1
+        if s_plus != -1:
+            G[self.branch_idx, s_plus] -= self.a
+        if s_minus != -1:
+            G[self.branch_idx, s_minus] += self.a
+        
+        #branch-col coefficient
+        G[self.branch_idx, self.branch_idx] -= (self.R + (2*self.L)/dt)
+
+        #RHS historical terms set the res matrix
+        b[self.branch_idx] = -(((2*self.L)/dt)*self.i_prev + self.vL_prev)
+    
+
+
+
+
+        
+
+
 
     def update_history(self, v_nodes):
         # TODO: i_prev  <- x[self.branch_idx]
         # TODO: vL_prev <- (v_p+ - v_p-) - a (v_s+ - v_s-) - R * i1
         #       use self._node_voltage() so ground nodes read as 0
-        raise NotImplementedError
+        self.i_prev = v_nodes[self.branch_idx]
+        p_plus, p_minus, s_plus, s_minus = self.nodes
+        v_p_plus = self._node_voltage(v_nodes, p_plus)
+        v_p_minus = self._node_voltage(v_nodes, p_minus)
+        v_s_plus = self._node_voltage(v_nodes, s_plus)
+        v_s_minus = self._node_voltage(v_nodes, s_minus)
+        self.vL_prev = (v_p_plus - v_p_minus) - self.a*(v_s_plus - v_s_minus) - (self.R * self.i_prev) 
+        )
