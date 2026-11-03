@@ -135,4 +135,4 @@ class Transformer(Element):
         v_s_plus = self._node_voltage(v_nodes, s_plus)
         v_s_minus = self._node_voltage(v_nodes, s_minus)
         self.vL_prev = (v_p_plus - v_p_minus) - self.a*(v_s_plus - v_s_minus) - (self.R * self.i_prev) 
-        )
+        
