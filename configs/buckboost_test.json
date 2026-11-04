@@ -1,0 +1,47 @@
+{
+  "dt": 1e-05,
+  "t_end": 0.05,
+  "nodes": ["gnd", "vdc_pos", "vdc_neg", "vbatt_pos", "vbatt_neg"],
+  "elements": [
+    {
+      "type": "vsource",
+      "name": "V_dclink",
+      "nodes": ["vdc_pos", "gnd"],
+      "value": 900.0
+    },
+    {
+      "type": "resistor",
+      "name": "R_dclink_neg",
+      "nodes": ["vdc_neg", "gnd"],
+      "value": 1e-4
+    },
+    {
+      "type": "buckboost",
+      "name": "BB1",
+      "nodes": ["vdc_pos", "vdc_neg", "vbatt_pos", "vbatt_neg"],
+      "value": {
+        "Ltot": 0.0015,
+        "mode": "buck",
+        "P_ref": 100000.0,
+        "VH_ref": 900.0
+      }
+    },
+    {
+      "type": "battery",
+      "name": "Batt",
+      "nodes": ["vbatt_pos", "vbatt_neg"],
+      "value": {
+        "Vnom": 600.0,
+        "Q": 0.367,
+        "SOC0": 80.0
+      }
+    },
+    {
+      "type": "resistor",
+      "name": "R_batt_gnd",
+      "nodes": ["vbatt_neg", "gnd"],
+      "value": 1e-4
+    }
+  ]
+}
+

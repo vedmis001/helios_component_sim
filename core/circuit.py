@@ -50,19 +50,20 @@ class Circuit:
 
         branch_idx = self.n_nodes
 
-        # Voltage sources
-        # Voltage sources each add one unknown (their branch current).
-        # Give each one its row/col index in the augmented matrix.
+        # Voltage sources each add 1 branch unknown
         self.vsources = [e for e in elements if isinstance(e, VoltageSource)]
         for vs in self.vsources:
             vs.branch_idx = branch_idx
             branch_idx += 1
 
-        # Transformers (and any other branch elements)
-        self.transformers = [e for e in elements if hasattr(e, "n_branches") and e.n_branches > 0]
-        for tr in self.transformers:
-            tr.branch_idx = branch_idx
-            branch_idx += 1
+        # Multi-branch / component elements (Transformers, Battery, BuckBoost, Machine)
+        self.branch_elements = [
+            e for e in elements 
+            if not isinstance(e, VoltageSource) and getattr(e, "n_branches", 0) > 0
+        ]
+        for el in self.branch_elements:
+            el.branch_idx = branch_idx
+            branch_idx += getattr(el, "n_branches", 1)
 
         self.n_unknowns = branch_idx        
 
@@ -139,14 +140,16 @@ class Circuit:
 
 
 
-    def update_histories(self, x: np.ndarray) -> None:
+    def update_histories(self, x: np.ndarray, dt: float = 1e-6) -> None:
         """
         After a solve, let every dynamic element update its history.
-        If you change update_history() to also take dt (see elements.py),
-        change the call here to match.
+        Passes dt if the component accepts it.
         """
         for element in self.elements:
-            element.update_history(x)
+            try:
+                element.update_history(x, dt)
+            except TypeError:
+                element.update_history(x)
 
     # ------------------------------------------------------------------
     # Helpers for reading results

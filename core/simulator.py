@@ -43,7 +43,7 @@ class Simulator:
             x_new = self.circuit.solve(G, b)
             self.time[step] = t_new
             self.x[step] = x_new
-            self.circuit.update_histories(x_new)
+            self.circuit.update_histories(x_new, self.dt)
 
 
         

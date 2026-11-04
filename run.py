@@ -29,8 +29,14 @@ import numpy as np
 from core.circuit import Circuit, ELEMENT_REGISTRY
 from core.simulator import Simulator
 from components.transformer import Transformer
+from components.battery import Battery
+from components.buckboost import BuckBoost
+from components.machine import InductionMachine
 
 ELEMENT_REGISTRY["transformer"] = Transformer
+ELEMENT_REGISTRY["battery"] = Battery
+ELEMENT_REGISTRY["buckboost"] = BuckBoost
+ELEMENT_REGISTRY["machine"] = InductionMachine
 
 
 def load_config(path: str) -> dict:
@@ -39,19 +45,21 @@ def load_config(path: str) -> dict:
 
 
 def save_csv(sim: Simulator, path: str) -> None:
-    """Columns: time, v(<node>) for every non-ground node, i(<source>) for every voltage source."""
+    """Columns: time, v(<node>) for every non-ground node, i(<source>) for branch elements."""
     circuit = sim.circuit
     nodes = sorted((idx, name) for name, idx in circuit.node_map.items() if idx >= 0)
+
+    all_branches = circuit.vsources + getattr(circuit, "branch_elements", [])
 
     header = (
         ["time"]
         + [f"v({name})" for _, name in nodes]
-        + [f"i({vs.name})" for vs in circuit.vsources]
+        + [f"i({el.name})" for el in all_branches]
     )
     columns = (
         [sim.time]
         + [sim.x[:, idx] for idx, _ in nodes]
-        + [sim.x[:, vs.branch_idx] for vs in circuit.vsources]
+        + [sim.x[:, el.branch_idx] for el in all_branches]
     )
 
     os.makedirs(os.path.dirname(path) or ".", exist_ok=True)

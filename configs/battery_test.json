@@ -1,0 +1,30 @@
+{
+  "dt": 1e-05,
+  "t_end": 0.1,
+  "nodes": ["gnd", "n_pos", "n_neg"],
+  "elements": [
+    {
+      "type": "battery",
+      "name": "B1",
+      "nodes": ["n_pos", "n_neg"],
+      "value": {
+        "Vnom": 600.0,
+        "Q": 0.367,
+        "SOC0": 80.0
+      }
+    },
+    {
+      "type": "resistor",
+      "name": "R_load",
+      "nodes": ["n_pos", "n_neg"],
+      "value": 2.0
+    },
+    {
+      "type": "resistor",
+      "name": "R_gnd_ref",
+      "nodes": ["n_neg", "gnd"],
+      "value": 1.0
+    }
+  ]
+}
+

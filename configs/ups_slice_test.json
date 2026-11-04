@@ -1,0 +1,58 @@
+{
+  "dt": 1e-05,
+  "t_end": 0.05,
+  "nodes": ["gnd", "vdc_p", "vdc_n", "vbatt_p", "vbatt_n"],
+  "elements": [
+    {
+      "type": "capacitor",
+      "name": "C_dclink",
+      "nodes": ["vdc_p", "vdc_n"],
+      "value": 0.020
+    },
+    {
+      "type": "resistor",
+      "name": "R_bleed",
+      "nodes": ["vdc_p", "vdc_n"],
+      "value": 4000.0
+    },
+    {
+      "type": "resistor",
+      "name": "R_rail_pos_gnd",
+      "nodes": ["vdc_p", "gnd"],
+      "value": 1000000.0
+    },
+    {
+      "type": "resistor",
+      "name": "R_rail_neg_gnd",
+      "nodes": ["vdc_n", "gnd"],
+      "value": 1000000.0
+    },
+    {
+      "type": "buckboost",
+      "name": "UPS_BB",
+      "nodes": ["vdc_p", "vdc_n", "vbatt_p", "vbatt_n"],
+      "value": {
+        "Ltot": 0.0015,
+        "mode": "boost",
+        "VH_ref": 900.0
+      }
+    },
+    {
+      "type": "battery",
+      "name": "UPS_Batt",
+      "nodes": ["vbatt_p", "vbatt_n"],
+      "value": {
+        "Vnom": 600.0,
+        "Q": 0.367,
+        "SOC0": 80.0
+      }
+    },
+    {
+      "type": "resistor",
+      "name": "R_compute_load",
+      "nodes": ["vdc_p", "vdc_n"],
+      "value": 0.81
+    }
+  ]
+}
+

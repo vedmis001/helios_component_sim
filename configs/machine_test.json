@@ -1,0 +1,44 @@
+{
+  "dt": 1e-05,
+  "t_end": 0.05,
+  "nodes": ["gnd", "va", "vb", "vc", "vn"],
+  "elements": [
+    {
+      "type": "vsource",
+      "name": "Vs_a",
+      "nodes": ["va", "vn"],
+      "value": 277.0
+    },
+    {
+      "type": "vsource",
+      "name": "Vs_b",
+      "nodes": ["vb", "vn"],
+      "value": -138.5
+    },
+    {
+      "type": "vsource",
+      "name": "Vs_c",
+      "nodes": ["vc", "vn"],
+      "value": -138.5
+    },
+    {
+      "type": "resistor",
+      "name": "R_n_gnd",
+      "nodes": ["vn", "gnd"],
+      "value": 1e-3
+    },
+    {
+      "type": "machine",
+      "name": "IM1",
+      "nodes": ["va", "vb", "vc", "vn"],
+      "value": {
+        "Vbase": 271.4,
+        "Ibase": 60.0,
+        "H": 1.0,
+        "D": 0.008,
+        "Tload": 1.0
+      }
+    }
+  ]
+}
+
