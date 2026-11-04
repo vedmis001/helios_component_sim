@@ -72,19 +72,20 @@ class Battery(Element):
         b[self.branch_idx] = self.E_ocv
 
     def update_history(self, v_nodes, dt: float = 1e-6):
-        # Current leaving battery into circuit
-        ibatt = v_nodes[self.branch_idx]
+        # Current leaving battery (+) terminal into circuit (MNA branch current enters + terminal)
+        ibatt = -v_nodes[self.branch_idx]
         self.ibatt_prev = ibatt
+        ibatt_kA = ibatt / 1000.0
 
-        # Filtered current i* (to avoid algebraic loops)
+        # Filtered current i* in kA (to avoid algebraic loops and match Q in kAh)
         alpha = dt / (self.tau_filter + dt)
-        self.i_filt += alpha * (ibatt - self.i_filt)
+        self.i_filt += alpha * (ibatt_kA - self.i_filt)
 
-        # Coulomb counting (Ah)
+        # Coulomb counting (kAh)
         # ibatt > 0 discharges, ibatt < 0 charges
-        self.it += (ibatt * dt) / 3600.0
+        self.it += (ibatt_kA * dt) / 3600.0
         self.it = np.clip(self.it, 0.0, 0.999 * self.Q)
-        self.soc = self.SOC0 - (100.0 / self.Q) * self.it
+        self.soc = 100.0 * (1.0 - self.it / self.Q)
 
         # Recompute open-circuit voltage for next step
         it_val = max(1e-4, self.it)
@@ -102,4 +103,3 @@ class Battery(Element):
                           - self.K * (self.Q / (it_val + 0.1 * self.Q)) * self.i_filt 
                           - self.K * (self.Q / (self.Q - it_val)) * it_val 
                           + exp_term)
-

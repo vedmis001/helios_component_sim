@@ -49,10 +49,15 @@
     },
     {
       "type": "resistor",
+      "name": "R_batt_gnd",
+      "nodes": ["vbatt_n", "gnd"],
+      "value": 0.0001
+    },
+    {
+      "type": "resistor",
       "name": "R_compute_load",
       "nodes": ["vdc_p", "vdc_n"],
       "value": 0.81
     }
   ]
 }
-

@@ -36,13 +36,32 @@ def load_psout_data(psout_path: str) -> dict:
     
     data = {}
     with mhi.psout.File(psout_path) as ps_file:
-        # Check all runs and collect channels
-        for run in ps_file.runs:
-            for channel in run.channels:
-                name = channel.name or channel.title or str(channel.id)
-                data[name] = np.array(channel.data)
+        runs = ps_file.runs() if callable(getattr(ps_file, "runs", None)) else ps_file.runs
+        for run in runs:
+            traces = run.traces() if hasattr(run, "traces") else getattr(run, "channels", [])
+            for trace in traces:
+                desc = (
+                    trace.get("Description")
+                    or trace.get("Component")
+                    or trace.get("Name")
+                    or (trace.call.get("Description") if getattr(trace, "call", None) else None)
+                    or (trace.call.get("Name") if getattr(trace, "call", None) else None)
+                    or getattr(trace, "name", None)
+                    or getattr(trace, "title", None)
+                    or str(trace.id)
+                )
+                arr = np.asarray(trace.data, dtype=float)
+                if desc == "Domain" or trace.get("Group") == "Domain":
+                    if "time" not in data:
+                        data["time"] = arr
+                    continue
+
+                data[desc] = arr
                 if "time" not in data:
-                    data["time"] = np.array(channel.time)
+                    if getattr(trace, "domain", None) is not None and getattr(trace.domain, "data", None) is not None:
+                        data["time"] = np.asarray(trace.domain.data, dtype=float)
+                    elif getattr(trace, "time", None) is not None:
+                        data["time"] = np.asarray(trace.time, dtype=float)
     return data
 
 
