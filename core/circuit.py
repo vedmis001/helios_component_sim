@@ -10,6 +10,7 @@ from .elements import (
     VoltageSource,
     CurrentSource,
 )
+from .sparse import SparseMatrix
 
 
 class SingularMatrixError(Exception):
@@ -40,13 +41,11 @@ class Circuit:
     ground_names = GROUND_NAMES
     element_registry = ELEMENT_REGISTRY
 
-  
-
-  
-    def __init__(self, node_map: dict, n_nodes: int, elements: list[Element]):
+    def __init__(self, node_map: dict, n_nodes: int, elements: list[Element], use_sparse: bool = True):
         self.node_map = node_map      # name -> matrix index (-1 for ground)
         self.n_nodes = n_nodes        # non-ground nodes only
         self.elements = elements
+        self.use_sparse = use_sparse
 
         branch_idx = self.n_nodes
 
@@ -65,13 +64,20 @@ class Circuit:
             el.branch_idx = branch_idx
             branch_idx += getattr(el, "n_branches", 1)
 
-        self.n_unknowns = branch_idx        
+        self.n_unknowns = branch_idx
+
+        # Pre-allocate vectorized COO triplet buffer (row, col, val) of size n_elements * 100
+        self._sparse_G = SparseMatrix(
+            n_unknowns=self.n_unknowns,
+            n_elements=len(self.elements),
+            capacity_per_element=100,
+        )
 
     # ------------------------------------------------------------------
     # Construction from a config dict (plumbing, not the numerical core)
     # ------------------------------------------------------------------
     @classmethod
-    def from_config(cls, config: dict) -> "Circuit":
+    def from_config(cls, config: dict, use_sparse: bool = True) -> "Circuit":
         """
         config = {
             "nodes": ["gnd", "n1", "n2"],
@@ -98,47 +104,63 @@ class Circuit:
             node_idx = [node_map[n] for n in spec["nodes"]]
             elements.append(element_cls(spec["name"], node_idx, spec["value"]))
 
-        return cls(node_map, n_nodes, elements)
+        return cls(node_map, n_nodes, elements, use_sparse=use_sparse)
 
     # ------------------------------------------------------------------
-    # Numerical core (yours to implement)
+    # Numerical core
     # ------------------------------------------------------------------
     def build_system(self, t: float, dt: float):
         """
         Assemble the MNA system for the solution at time t.
 
-        Returns (G, b) where G is (n_unknowns x n_unknowns), b is (n_unknowns,).
-        Steps:
-          1. start from zeros
-          2. every element stamps itself into G and b
-          3. return both
+        Returns (G, b) where:
+          - If `self.use_sparse` is True (default), G is a pre-allocated `SparseMatrix`
+            triplet buffer (row, col, val vectors of capacity `n_elements * 100`)
+          - If `self.use_sparse` is False, G is a dense `(n_unknowns x n_unknowns)` array
+          - b is `(n_unknowns,)`
         """
-        #making G
-
-        G = np.zeros((self.n_unknowns, self.n_unknowns))
+        if self.use_sparse:
+            self._sparse_G.reset()
+            G = self._sparse_G
+        else:
+            G = np.zeros((self.n_unknowns, self.n_unknowns))
         b = np.zeros(self.n_unknowns)
         
         for elmt in self.elements:
-            #check syntax on this
             elmt.stamp(G, b, t, dt)
 
         return (G, b)
     
-    def solve(self, G: np.ndarray, b: np.ndarray) -> np.ndarray:
+    def solve(self, G, b: np.ndarray) -> np.ndarray:
         """
         Solve G x = b and return x.
-        numpy.linalg.solve raises LinAlgError on a singular matrix.
-        A singular G almost always means a floating node (no DC path to
-        ground) or a missing/duplicated stamp. Decide how you want to
-        report that.
+        Supports both `SparseMatrix` (vectorized COO -> CSC sparse LU) and dense `np.ndarray`.
+        Raises `SingularMatrixError` on a singular matrix.
         """
         try:
+            if isinstance(G, SparseMatrix):
+                return G.solve(b)
             return np.linalg.solve(G, b)
         except np.linalg.LinAlgError as e:
             raise SingularMatrixError("Singular matrix encountered. Possible floating node.") from e
 
-
-
+    def density_summary(self, t: float = 0.0, dt: float = 1e-6) -> dict:
+        """Return matrix density/sparsity and triplet buffer capacity metrics."""
+        G, _ = self.build_system(t, dt)
+        if isinstance(G, SparseMatrix):
+            return G.density_summary()
+        nnz = int(np.count_nonzero(G))
+        total = self.n_unknowns * self.n_unknowns
+        density = float(nnz) / float(total) if total > 0 else 0.0
+        return {
+            "n_unknowns": self.n_unknowns,
+            "total_entries": total,
+            "stamped_triplets": nnz,
+            "allocated_capacity": total,
+            "nnz": nnz,
+            "density": density,
+            "sparsity": 1.0 - density,
+        }
 
     def update_histories(self, x: np.ndarray, dt: float = 1e-6) -> None:
         """
@@ -164,4 +186,3 @@ class Circuit:
             if vs.name == name:
                 return vs.branch_idx
         raise KeyError(f"No voltage source named {name!r}")
-    

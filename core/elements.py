@@ -24,7 +24,7 @@ class Element(ABC):
         """
         Stamp this element's contribution into G and b.
         Called once per timestep before solving.
-        G: conductance matrix (n_nodes x n_nodes)
+        G: conductance matrix (n_nodes x n_nodes) or SparseMatrix triplet buffer
         b: RHS vector (n_nodes,)
         t: current simulation time
         dt: timestep size
@@ -74,6 +74,16 @@ class Resistor(Element):
         # remember to skip any node that is -1 (ground)
         g_res = 1/self.R
         n_pos, n_neg = self.nodes[0], self.nodes[1]
+        if hasattr(G, "add"):
+            if n_pos != -1:
+                G.add(n_pos, n_pos, g_res)
+            if n_neg != -1:
+                G.add(n_neg, n_neg, g_res)
+            if (n_pos != -1) and (n_neg != -1):
+                G.add(n_pos, n_neg, -g_res)
+                G.add(n_neg, n_pos, -g_res)
+            return
+
         if n_pos != -1:
             G[n_pos, n_pos] += g_res
         if n_neg != -1:
@@ -119,20 +129,29 @@ class Capacitor(Element):
         # Again skip ground nodes
         
         n_pos, n_neg = self.nodes[0], self.nodes[1]
-        #calculate time-step dependent params
+        #calculate time-step dependent params (recomputed from v_prev, i_prev for adaptive dt)
         self.geq = (2*self.C)/dt
+        self.I_hist = (-self.geq * self.v_prev) - self.i_prev
 
+        if hasattr(G, "add"):
+            if n_pos != -1:
+                G.add(n_pos, n_pos, self.geq)
+            if n_neg != -1:
+                G.add(n_neg, n_neg, self.geq)
+            if (n_pos != -1) and (n_neg != -1):
+                G.add(n_pos, n_neg, -self.geq)
+                G.add(n_neg, n_pos, -self.geq)
+        else:
+            #add to conductance matrix
+            if n_pos != -1:
+                G[n_pos, n_pos] += self.geq
+            if n_neg != -1:
+                G[n_neg, n_neg] += self.geq
 
-        #add to conductance matrix
-        if n_pos != -1:
-            G[n_pos, n_pos] += self.geq
-        if n_neg != -1:
-            G[n_neg, n_neg] += self.geq
-
-        #off diagonals
-        if (n_pos != -1) and (n_neg != -1):
-            G[n_pos, n_neg] -= self.geq
-            G[n_neg, n_pos] -= self.geq
+            #off diagonals
+            if (n_pos != -1) and (n_neg != -1):
+                G[n_pos, n_neg] -= self.geq
+                G[n_neg, n_pos] -= self.geq
 
         #inject equiv i into b
         if n_pos != -1:
@@ -184,20 +203,29 @@ class Inductor(Element):
         # TODO: stamp and inject history current — same pattern as Capacitor
         
         n_pos, n_neg = self.nodes[0], self.nodes[1]
-        #calculate time-step dependent params
+        #calculate time-step dependent params (recomputed from v_prev, i_prev for adaptive dt)
         self.geq = dt/(2*self.L)
+        self.I_hist = (self.geq * self.v_prev) + self.i_prev
 
+        if hasattr(G, "add"):
+            if n_pos != -1:
+                G.add(n_pos, n_pos, self.geq)
+            if n_neg != -1:
+                G.add(n_neg, n_neg, self.geq)
+            if (n_pos != -1) and (n_neg != -1):
+                G.add(n_pos, n_neg, -self.geq)
+                G.add(n_neg, n_pos, -self.geq)
+        else:
+            #add to conductance matrix
+            if n_pos != -1:
+                G[n_pos, n_pos] += self.geq
+            if n_neg != -1:
+                G[n_neg, n_neg] += self.geq
 
-        #add to conductance matrix
-        if n_pos != -1:
-            G[n_pos, n_pos] += self.geq
-        if n_neg != -1:
-            G[n_neg, n_neg] += self.geq
-
-        #off diagonals
-        if (n_pos != -1) and (n_neg != -1):
-            G[n_pos, n_neg] -= self.geq
-            G[n_neg, n_pos] -= self.geq
+            #off diagonals
+            if (n_pos != -1) and (n_neg != -1):
+                G[n_pos, n_neg] -= self.geq
+                G[n_neg, n_pos] -= self.geq
 
         #inject equiv i into b
         if n_pos != -1:
@@ -264,6 +292,16 @@ class VoltageSource(Element):
         # skip ground nodes as usual
 
         n_pos, n_neg = self.nodes[0], self.nodes[1]
+        if hasattr(G, "add"):
+            if n_pos != -1:
+                G.add(n_pos, self.branch_idx, 1.0)
+                G.add(self.branch_idx, n_pos, 1.0)
+            if n_neg != -1:
+                G.add(n_neg, self.branch_idx, -1.0)
+                G.add(self.branch_idx, n_neg, -1.0)
+            b[self.branch_idx] = self.voltage(t)
+            return
+
         if n_pos != -1:
             G[n_pos][self.branch_idx] += 1
             G[self.branch_idx][n_pos] += 1
@@ -271,7 +309,6 @@ class VoltageSource(Element):
             G[n_neg][self.branch_idx] -= 1
             G[self.branch_idx][n_neg] -= 1
         b[self.branch_idx] = self.voltage(t)
-
 
 
         

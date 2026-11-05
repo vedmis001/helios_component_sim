@@ -53,20 +53,29 @@ class Battery(Element):
         """
         p_plus, p_minus = self.nodes[0], self.nodes[1]
 
-        # KCL column entries
-        if p_plus != -1:
-            G[p_plus, self.branch_idx] += 1
-        if p_minus != -1:
-            G[p_minus, self.branch_idx] -= 1
+        if hasattr(G, "add"):
+            if p_plus != -1:
+                G.add(p_plus, self.branch_idx, 1.0)
+                G.add(self.branch_idx, p_plus, 1.0)
+            if p_minus != -1:
+                G.add(p_minus, self.branch_idx, -1.0)
+                G.add(self.branch_idx, p_minus, -1.0)
+            G.add(self.branch_idx, self.branch_idx, -self.R)
+        else:
+            # KCL column entries
+            if p_plus != -1:
+                G[p_plus, self.branch_idx] += 1
+            if p_minus != -1:
+                G[p_minus, self.branch_idx] -= 1
 
-        # Constraint row entries
-        if p_plus != -1:
-            G[self.branch_idx, p_plus] += 1
-        if p_minus != -1:
-            G[self.branch_idx, p_minus] -= 1
+            # Constraint row entries
+            if p_plus != -1:
+                G[self.branch_idx, p_plus] += 1
+            if p_minus != -1:
+                G[self.branch_idx, p_minus] -= 1
 
-        # Internal resistance drop in constraint row
-        G[self.branch_idx, self.branch_idx] -= self.R
+            # Internal resistance drop in constraint row
+            G[self.branch_idx, self.branch_idx] -= self.R
 
         # Open circuit voltage on RHS
         b[self.branch_idx] = self.E_ocv

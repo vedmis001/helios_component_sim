@@ -6,17 +6,6 @@ class InductionMachine(Element):
     """
     Double-Cage Rotor Induction Machine in synchronous (qd0) frame.
     Governing equations from HELIOS Reference Section 17 (Eq. 52-65):
-
-    Parameters:
-        rs = 0.0192 pu, rr1 = 0.051 pu, rr2 = 14 pu
-        Xls = 0.0665 pu, Xm = 2.883 pu, Xlr1 = 0.0665 pu, Xlr2 = 1.188 pu
-        H = 1.0 s (2H = 2.0 s), D = 0.008 pu
-        Rating: 50 kW, Vbase = 271.4 V, Ibase = 60 A, wbase = 377 rad/s
-
-    States:
-        Flux linkages: [lambda_qs, lambda_ds, lambda_qr1, lambda_dr1, lambda_qr2, lambda_dr2]
-        Rotor speed: wr (pu)
-        Rotor angle: theta_r (rad)
     """
 
     n_branches = 3  # Three stator phase branch currents [ia, ib, ic]
@@ -80,16 +69,21 @@ class InductionMachine(Element):
 
         for k, n_ph in enumerate([na, nb, nc]):
             b_idx = self.branch_idx + k
-            # KCL column
-            if n_ph != -1: G[n_ph, b_idx] += 1
-            if n_neutral != -1: G[n_neutral, b_idx] -= 1
+            if hasattr(G, "add"):
+                if n_ph != -1:
+                    G.add(n_ph, b_idx, 1.0)
+                    G.add(b_idx, n_ph, 1.0)
+                if n_neutral != -1:
+                    G.add(n_neutral, b_idx, -1.0)
+                    G.add(b_idx, n_neutral, -1.0)
+                G.add(b_idx, b_idx, -R_eff)
+            else:
+                if n_ph != -1: G[n_ph, b_idx] += 1
+                if n_neutral != -1: G[n_neutral, b_idx] -= 1
+                if n_ph != -1: G[b_idx, n_ph] += 1
+                if n_neutral != -1: G[b_idx, n_neutral] -= 1
+                G[b_idx, b_idx] -= R_eff
 
-            # Constraint row
-            if n_ph != -1: G[b_idx, n_ph] += 1
-            if n_neutral != -1: G[b_idx, n_neutral] -= 1
-            G[b_idx, b_idx] -= R_eff
-
-            # Back-EMF / history term
             b[b_idx] = -R_eff * self.i_stator[k]
 
     def update_history(self, v_nodes, dt: float = 1e-6):
@@ -117,4 +111,3 @@ class InductionMachine(Element):
         self.theta_e += self.wbase * dt
         if self.theta_e > 2.0 * np.pi:
             self.theta_e -= 2.0 * np.pi
-

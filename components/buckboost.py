@@ -11,22 +11,6 @@ class BuckBoost(Element):
         nodes = [VH_pos, VH_neg, VL_pos, VL_neg]
         VH: High-voltage side (DC link, 900 V)
         VL: Low-voltage side (Battery, 600 V)
-
-    Inductor dynamics:
-        Buck (charging, mode='buck'):
-            L_tot * dIL/dt = D_Buck * VH - VL
-            IH = D_Buck * IL
-        Boost (discharging, mode='boost'):
-            L_tot * dIL/dt = VL - (1 - D_Boost) * VH
-            IH = (1 - D_Boost) * IL
-
-    PI Controllers:
-        Boost (voltage regulation):
-            eV = V_H_ref - VH
-            D_Boost = sat[0, Dmax_boost](Kp_boost * eV + Ki_boost * integral(eV))
-        Buck (power regulation):
-            eP = P_charge_ref - (VH * IH)
-            D_Buck = sat[0, Dmax_buck](Kp_buck * eP + Ki_buck * integral(eP))
     """
 
     n_branches = 1  # Inductor current iL is an MNA branch variable
@@ -67,43 +51,62 @@ class BuckBoost(Element):
         vh_p, vh_n, vl_p, vl_n = self.nodes
         R_L = (2.0 * self.Ltot) / dt
 
-        if self.mode == "buck":
-            eff_D = self.duty
-            # v_ind = eff_D * VH - VL
-            # Constraint row: eff_D * (vh_p - vh_n) - (vl_p - vl_n) - R_L * iL = RHS
-            if vh_p != -1: G[self.branch_idx, vh_p] += eff_D
-            if vh_n != -1: G[self.branch_idx, vh_n] -= eff_D
-            if vl_p != -1: G[self.branch_idx, vl_p] -= 1.0
-            if vl_n != -1: G[self.branch_idx, vl_n] += 1.0
+        if hasattr(G, "add"):
+            if self.mode == "buck":
+                eff_D = self.duty
+                if vh_p != -1:
+                    G.add(self.branch_idx, vh_p, eff_D)
+                    G.add(vh_p, self.branch_idx, eff_D)
+                if vh_n != -1:
+                    G.add(self.branch_idx, vh_n, -eff_D)
+                    G.add(vh_n, self.branch_idx, -eff_D)
+                if vl_p != -1:
+                    G.add(self.branch_idx, vl_p, -1.0)
+                    G.add(vl_p, self.branch_idx, -1.0)
+                if vl_n != -1:
+                    G.add(self.branch_idx, vl_n, 1.0)
+                    G.add(vl_n, self.branch_idx, 1.0)
+            else:
+                D_off = 1.0 - self.duty
+                if vl_p != -1:
+                    G.add(self.branch_idx, vl_p, 1.0)
+                    G.add(vl_p, self.branch_idx, 1.0)
+                if vl_n != -1:
+                    G.add(self.branch_idx, vl_n, -1.0)
+                    G.add(vl_n, self.branch_idx, -1.0)
+                if vh_p != -1:
+                    G.add(self.branch_idx, vh_p, -D_off)
+                    G.add(vh_p, self.branch_idx, -D_off)
+                if vh_n != -1:
+                    G.add(self.branch_idx, vh_n, D_off)
+                    G.add(vh_n, self.branch_idx, D_off)
+            G.add(self.branch_idx, self.branch_idx, -R_L)
+        else:
+            if self.mode == "buck":
+                eff_D = self.duty
+                if vh_p != -1: G[self.branch_idx, vh_p] += eff_D
+                if vh_n != -1: G[self.branch_idx, vh_n] -= eff_D
+                if vl_p != -1: G[self.branch_idx, vl_p] -= 1.0
+                if vl_n != -1: G[self.branch_idx, vl_n] += 1.0
 
-            # KCL injections:
-            # High side draws IH = eff_D * iL
-            if vh_p != -1: G[vh_p, self.branch_idx] += eff_D
-            if vh_n != -1: G[vh_n, self.branch_idx] -= eff_D
-            # Low side receives IL
-            if vl_p != -1: G[vl_p, self.branch_idx] -= 1.0
-            if vl_n != -1: G[vl_n, self.branch_idx] += 1.0
+                if vh_p != -1: G[vh_p, self.branch_idx] += eff_D
+                if vh_n != -1: G[vh_n, self.branch_idx] -= eff_D
+                if vl_p != -1: G[vl_p, self.branch_idx] -= 1.0
+                if vl_n != -1: G[vl_n, self.branch_idx] += 1.0
+            else:
+                D_off = 1.0 - self.duty
+                if vl_p != -1: G[self.branch_idx, vl_p] += 1.0
+                if vl_n != -1: G[self.branch_idx, vl_n] -= 1.0
+                if vh_p != -1: G[self.branch_idx, vh_p] -= D_off
+                if vh_n != -1: G[self.branch_idx, vh_n] += D_off
 
-        else: # boost
-            D_off = 1.0 - self.duty
-            # v_ind = VL - D_off * VH
-            # Constraint row: (vl_p - vl_n) - D_off * (vh_p - vh_n) - R_L * iL = RHS
-            if vl_p != -1: G[self.branch_idx, vl_p] += 1.0
-            if vl_n != -1: G[self.branch_idx, vl_n] -= 1.0
-            if vh_p != -1: G[self.branch_idx, vh_p] -= D_off
-            if vh_n != -1: G[self.branch_idx, vh_n] += D_off
+                if vl_p != -1: G[vl_p, self.branch_idx] += 1.0
+                if vl_n != -1: G[vl_n, self.branch_idx] -= 1.0
+                if vh_p != -1: G[vh_p, self.branch_idx] -= D_off
+                if vh_n != -1: G[vh_n, self.branch_idx] += D_off
 
-            # KCL injections:
-            # Low side draws IL
-            if vl_p != -1: G[vl_p, self.branch_idx] += 1.0
-            if vl_n != -1: G[vl_n, self.branch_idx] -= 1.0
-            # High side injects IH = D_off * iL
-            if vh_p != -1: G[vh_p, self.branch_idx] -= D_off
-            if vh_n != -1: G[vh_n, self.branch_idx] += D_off
+            G[self.branch_idx, self.branch_idx] -= R_L
 
-        # Inductor numerical resistance on diagonal
-        G[self.branch_idx, self.branch_idx] -= R_L
-        # History term on RHS
         b[self.branch_idx] = -(R_L * self.iL_prev + self.vL_ind_prev)
 
     def update_history(self, v_nodes, dt: float = 1e-6):
@@ -134,4 +137,3 @@ class BuckBoost(Element):
 
         self.iL_prev = iL
         self.vL_ind_prev = v_ind
-
